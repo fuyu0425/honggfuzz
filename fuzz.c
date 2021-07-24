@@ -331,6 +331,9 @@ static bool fuzz_fetchInput(run_t* run) {
     }
 
     if (fuzz_getState(run->global) == _HF_STATE_DYNAMIC_MAIN) {
+        if (run->global->io.syncDir && input_addDynamicExternalInput(run)) {
+            LOG_D("sync file fetched");
+        } else
         if (run->global->exe.externalCommand) {
             if (!input_prepareExternalFile(run)) {
                 LOG_E("input_prepareExternalFile() failed");

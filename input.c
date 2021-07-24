@@ -33,6 +33,9 @@
 #include <string.h>
 #include <sys/queue.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/file.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 #include "fuzz.h"
@@ -370,8 +373,51 @@ static bool input_cmpCov(dynfile_t* item1, dynfile_t* item2) {
 #define TAILQ_FOREACH_HF(var, head, field)                                                         \
     for ((var) = TAILQ_FIRST((head)); (var); (var) = TAILQ_NEXT((var), field))
 
+bool input_addDynamicExternalInput(run_t* run) {
+    static pthread_mutex_t input_mutex = PTHREAD_MUTEX_INITIALIZER;
+    if (time(0) <= run->global->timing.syncTime) {
+        return false;
+    }
+    MX_SCOPED_LOCK(&input_mutex);
+    flock(run->global->io.syncLockFD, LOCK_EX);
+
+    struct dirent* entry = NULL;
+    DIR *dp = NULL;
+    dp = opendir(run->global->io.syncDir);
+    if (dp != NULL) {
+        while ((entry = readdir(dp))) {
+            char path[PATH_MAX];
+            snprintf(path, PATH_MAX, "%s/%s", run->global->io.syncDir, entry->d_name);
+            struct stat st;
+            if (stat(path, &st) == -1) {
+                LOG_W("Couldn't stat() the '%s' file", path);
+                continue;
+            }
+            if (!S_ISREG(st.st_mode)) {
+                LOG_D("'%s' is not a regular file, skipping", path);
+                continue;
+            }
+            input_setSize(run, run->global->mutate.maxInputSz);
+            ssize_t fileSz = files_readFileToBufMax(path, run->dynfile->data, run->global->mutate.maxInputSz);
+            if (fileSz < 0) {
+                LOG_E("Couldn't read contents of '%s'", path);
+                unlink(path);
+                continue;
+            }
+            input_setSize(run, fileSz);
+            unlink(path);
+            flock(run->global->io.syncLockFD, LOCK_UN);
+            closedir(dp);
+            return true;
+        }
+    }
+    ATOMIC_SET(run->global->timing.syncTime, time(NULL) + run->global->io.syncInterval);
+    flock(run->global->io.syncLockFD, LOCK_UN);
+    return false;
+}
+
 void input_addDynamicInput(run_t* run) {
-    ATOMIC_SET(run->global->timing.lastCovUpdate, time(NULL));
+  ATOMIC_SET(run->global->timing.lastCovUpdate, time(NULL));
 
     dynfile_t* dynfile     = (dynfile_t*)util_Calloc(sizeof(dynfile_t));
     dynfile->size          = run->dynfile->size;

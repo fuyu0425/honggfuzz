@@ -197,6 +197,9 @@ typedef struct {
     } threads;
     struct {
         const char* inputDir;
+        const char* syncDir;
+        time_t syncInterval;
+        int syncLockFD;
         const char* outputDir;
         DIR*        inputDirPtr;
         size_t      fileCnt;
@@ -237,12 +240,13 @@ typedef struct {
         sigset_t           waitSigSet;
     } exe;
     struct {
-        time_t  timeStart;
-        time_t  runEndTime;
-        time_t  tmOut;
-        time_t  lastCovUpdate;
+        time_t timeStart;
+        time_t runEndTime;
+        time_t tmOut;
+        time_t lastCovUpdate;
+        time_t syncTime;
         int64_t timeOfLongestUnitUSecs;
-        bool    tmoutVTALRM;
+        bool tmoutVTALRM;
     } timing;
     struct {
         struct {

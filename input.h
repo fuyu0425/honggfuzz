@@ -50,4 +50,7 @@ extern bool   input_prepareExternalFile(run_t* run);
 extern bool   input_postProcessFile(run_t* run, const char* cmd);
 extern bool   input_prepareDynamicFileForMinimization(run_t* run);
 
+extern bool input_addDynamicExternalInput(run_t* run);
+
+
 #endif /* ifndef _HF_INPUT_H_ */

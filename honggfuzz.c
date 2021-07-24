@@ -327,6 +327,9 @@ int main(int argc, char** argv) {
     if (hfuzz.io.inputDir && access(hfuzz.io.inputDir, R_OK) == -1) {
         PLOG_F("Input directory '%s' is not readable", hfuzz.io.inputDir);
     }
+    if (hfuzz.io.syncDir && access(hfuzz.io.syncDir, R_OK | W_OK) == -1) {
+        PLOG_F("Sync directory '%s' is not readable or writable", hfuzz.io.syncDir);
+    }
     if (hfuzz.io.outputDir && access(hfuzz.io.outputDir, W_OK) == -1) {
         PLOG_F("Output directory '%s' is not writeable", hfuzz.io.outputDir);
     }
